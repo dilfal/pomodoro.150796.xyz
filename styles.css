@@ -232,6 +232,17 @@ button:active {
     background-color: #2fa9a2;
 }
 
+#settingsContent .love {
+    margin: 22px 0 0;
+    font-size: 16px;
+    color: #bdc3c7;
+    text-align: center;
+}
+
+#settingsContent .love .heart {
+    color: #40E0D0;
+}
+
 /* Animazione pioggia simboli */
 @keyframes rainAnimation {
     0% {

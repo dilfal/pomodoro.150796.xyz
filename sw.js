@@ -1,6 +1,6 @@
 /* Service worker di Pomodoro: la app si apre anche senza rete.
    Si cambia VERSIONE a ogni modifica dei file, così i telefoni scaricano la copia nuova. */
-var VERSIONE = 'pomodoro-v1';
+var VERSIONE = 'pomodoro-v2';
 var NUCLEO = ['./', 'index.html', 'styles.css', 'script.js', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
