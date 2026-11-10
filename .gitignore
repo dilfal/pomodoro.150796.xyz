@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# appunti interni e strumenti di lavoro: restano sul computer e non si pubblicano (decisione del 10/11/2026)
+*.md
+docs/
+tools/
