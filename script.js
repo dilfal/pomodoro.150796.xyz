@@ -4,7 +4,12 @@ let longBreakTime = 15 * 60;
 let cycleCount = 4;
 let currentCycle = 1;
 let isWorking = true;
-let timerInterval;
+let tickId = null;        // intervallo di aggiornamento (null = fermo o in pausa)
+let phaseActive = false;  // c'è una fase iniziata (in corso o in pausa)
+let remainingMs = 0;      // tempo che manca alla fine della fase
+let endAt = 0;            // orario (ms) in cui finisce la fase
+let wakeLock = null;
+let audioUnlocked = false;
 
 const notificationSound = document.getElementById('notificationSound');
 const notificationLongSound = document.getElementById('notificationLongSound');
@@ -91,22 +96,27 @@ window.addEventListener('click', function (event) {
 });
 
 document.getElementById('toggleButton').addEventListener('click', () => {
-    if (!timerInterval) {
-        startTimer(workTime, document.getElementById('time'));
-        updateCycleInfo();
-        document.getElementById('toggleIcon').classList.replace('fa-play', 'fa-pause');
-    } else {
-        clearInterval(timerInterval);
-        timerInterval = null;
+    unlockAudio(); // su iPhone i suoni partono più tardi solo se sbloccati con un tocco
+    if (tickId) {
+        pauseTimer();
         document.getElementById('toggleIcon').classList.replace('fa-pause', 'fa-play');
         stopRain();
         stopSounds();
+    } else if (phaseActive) {
+        resumeTimer();
+        document.getElementById('toggleIcon').classList.replace('fa-play', 'fa-pause');
+    } else {
+        startTimer(workTime, document.getElementById('time'));
+        updateCycleInfo();
+        document.getElementById('toggleIcon').classList.replace('fa-play', 'fa-pause');
     }
 });
 
 document.getElementById('stopButton').addEventListener('click', () => {
-    clearInterval(timerInterval);
-    timerInterval = null;
+    clearInterval(tickId);
+    tickId = null;
+    phaseActive = false;
+    releaseWakeLock();
     document.getElementById('time').textContent = formatTime(workTime);
     document.getElementById('toggleIcon').classList.replace('fa-pause', 'fa-play');
     currentCycle = 1;
@@ -117,23 +127,77 @@ document.getElementById('stopButton').addEventListener('click', () => {
     stopSounds();
 });
 
+// Il tempo si calcola dall'orario di fine e non contando i tick: se iOS rallenta
+// la pagina (schermo bloccato, altra app) il timer resta giusto.
 function startTimer(duration, display) {
-    let timer = duration, minutes, seconds;
-    timerInterval = setInterval(() => {
-        minutes = parseInt(timer / 60, 10);
-        seconds = parseInt(timer % 60, 10);
+    phaseActive = true;
+    remainingMs = duration * 1000;
+    resumeTimer();
+}
 
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
+function resumeTimer() {
+    endAt = Date.now() + remainingMs;
+    clearInterval(tickId);
+    tickId = setInterval(tick, 250);
+    tick();
+    requestWakeLock();
+}
 
-        display.textContent = minutes + ":" + seconds;
+function pauseTimer() {
+    remainingMs = Math.max(0, endAt - Date.now());
+    clearInterval(tickId);
+    tickId = null;
+    releaseWakeLock();
+}
 
-        if (--timer < 0) {
-            clearInterval(timerInterval);
-            playNotification();
-            timerFinished();
+function tick() {
+    const left = endAt - Date.now();
+    if (left <= 0) {
+        clearInterval(tickId);
+        tickId = null;
+        document.getElementById('time').textContent = formatTime(0);
+        playNotification();
+        timerFinished();
+        return;
+    }
+    document.getElementById('time').textContent = formatTime(Math.ceil(left / 1000));
+}
+
+// Quando si torna sulla app: aggiorna subito il tempo e riprende a tenere lo schermo acceso.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && tickId) {
+        tick();
+        requestWakeLock();
+    }
+});
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator && !wakeLock) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
         }
-    }, 1000);
+    } catch (e) { /* non disponibile: pazienza */ }
+}
+
+function releaseWakeLock() {
+    try { if (wakeLock) wakeLock.release(); } catch (e) {}
+    wakeLock = null;
+}
+
+// Safari permette di riprodurre un suono solo se quell'elemento è stato avviato da un tocco.
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    [notificationSound, notificationLongSound].forEach((el) => {
+        el.muted = true;
+        const fine = () => { el.pause(); el.currentTime = 0; el.muted = false; };
+        try {
+            const p = el.play();
+            if (p && p.then) p.then(fine).catch(() => { el.muted = false; audioUnlocked = false; });
+            else fine();
+        } catch (e) { el.muted = false; audioUnlocked = false; }
+    });
 }
 
 function timerFinished() {
@@ -244,3 +308,8 @@ function formatTime(seconds) {
     return `${minutes < 10 ? '0' : ''}${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
 }
 
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+}

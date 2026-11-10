@@ -8,10 +8,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
     font-size: 16px;
-    overflow-y: auto;
     overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .container {
@@ -24,7 +28,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-height: 90vh;
     box-sizing: border-box;
     position: relative;
 }
@@ -54,13 +57,13 @@ h1 {
 }
 
 #timer {
-    font-size: 80px;
+    font-size: clamp(54px, 19vw, 80px);
     font-weight: bold;
     margin: 20px 0;
     color: #ffffff;
     border: 3px solid #40E0D0;
     border-radius: 12px;
-    padding: 25px;
+    padding: 25px clamp(14px, 5vw, 25px);
     display: inline-block;
     background-color: #121212;
     box-shadow: inset 0px 0px 15px rgba(0, 0, 0, 0.5);
@@ -82,12 +85,18 @@ button {
     border-radius: 6px;
     box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
     transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
-button:hover {
-    background-color: #36c1b5;
-    box-shadow: 0px 7px 20px rgba(0, 0, 0, 0.4);
-    transform: translateY(-2px);
+/* Su iPhone :hover resta attivo dopo il tocco: lo applichiamo solo dove c'è un mouse. */
+@media (hover: hover) {
+    button:hover {
+        background-color: #36c1b5;
+        box-shadow: 0px 7px 20px rgba(0, 0, 0, 0.4);
+        transform: translateY(-2px);
+    }
 }
 
 button:active {
@@ -151,9 +160,13 @@ button:active {
     transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
     z-index: 30; /* Modifica il valore a 30 per essere sopra l'overlay */
     border: 2px solid #40E0D0;
-    max-width: 90%;
+    box-sizing: border-box;
+    width: calc(100% - 32px);
+    max-width: 420px;
     max-height: 80vh;
+    max-height: 80dvh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 #settingsContent.show {
@@ -165,8 +178,10 @@ button:active {
 #settingsContent div {
     margin-bottom: 15px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
+    gap: 8px;
 }
 
 #settingsContent label {
@@ -207,8 +222,10 @@ button:active {
     transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-#settingsContent button:hover {
-    background-color: #36c1b5;
+@media (hover: hover) {
+    #settingsContent button:hover {
+        background-color: #36c1b5;
+    }
 }
 
 #settingsContent button:active {
